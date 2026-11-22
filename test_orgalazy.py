@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Tests de non-régression pour orgalazy.py (bibliothèque standard uniquement).
+"""Non-regression tests for orgalazy.py (standard library only).
 
-Lancement :
-    cd ~/file-organizer
+Run with:
+    cd orgalazy
     python3 -m unittest -v test_orgalazy.py
 """
 
@@ -63,7 +63,7 @@ class TestCategorization(OrgalazyTestCase):
         self.assertTrue((self.dir / "Images" / "photo.jpg").is_file())
         self.assertTrue((self.dir / "Documents" / "report.pdf").is_file())
         self.assertTrue((self.dir / "Archives" / "archive.zip").is_file())
-        self.assertTrue((self.dir / "Autres" / "mystery.xyz").is_file())
+        self.assertTrue((self.dir / "Others" / "mystery.xyz").is_file())
         self.assertFalse((self.dir / "photo.jpg").exists())
 
     def test_does_not_overwrite_existing_destination(self) -> None:
@@ -150,7 +150,7 @@ class TestDuplicates(OrgalazyTestCase):
 
         self.assertEqual(self.apply(actions), [])
         self.assertTrue((self.dir / "Documents" / "old.txt").is_file())
-        self.assertTrue((self.dir / "_Doublons" / "new.txt").is_file())
+        self.assertTrue((self.dir / "_Duplicates" / "new.txt").is_file())
 
     def test_different_content_same_size_is_not_a_duplicate(self) -> None:
         self.write("a.txt", "AAAA")

@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 """
-orgalazy_tui.py — Interface texte interactive (TUI) pour Orgalazy.
+orgalazy_tui.py — Interactive text interface (TUI) for Orgalazy.
 
-Doit être placé dans le même dossier que orgalazy.py (import direct).
-Uniquement la bibliothèque standard (curses inclus depuis toujours sur Linux/macOS).
+Must be placed in the same folder as orgalazy.py (direct import).
+Standard library only (curses has shipped with Linux/macOS for ages).
 
-Usage :
+Usage:
     python3 orgalazy_tui.py
 
-Navigation :
-    Flèches haut/bas : se déplacer
-    Entrée            : sélectionner / ouvrir une catégorie
-    Espace             : cocher/décocher une option
-    a                  : appliquer les actions (depuis l'écran d'aperçu)
-    q / Échap          : retour / quitter
+Navigation:
+    Up/Down arrows : move
+    Enter          : select / expand a category
+    Space          : toggle an option
+    a              : apply the planned actions (from the preview screen)
+    q / Escape     : back / quit
 
-Un écran "Aide" est disponible dans le menu principal.
+A "Help" screen is available from the main menu.
 """
 
 from __future__ import annotations
@@ -43,7 +43,7 @@ ASCII_ART_WIDTH = max(len(line) for line in ASCII_ART)
 
 
 # --------------------------------------------------------------------------
-# État de l'application
+# Application state
 # --------------------------------------------------------------------------
 
 class AppState:
@@ -51,17 +51,19 @@ class AppState:
         self.target_dir_str: str = str(Path.home() / "Downloads")
         self.recursive: bool = False
         self.dedupe: bool = True
+        self.by_date: bool = False
+        self.include_hidden: bool = False
         self.exclude_str: str = ""
         self.config_path_str: str = ""
         self.actions: list[orgalazy.Action] = []
 
 
 # --------------------------------------------------------------------------
-# Petits utilitaires d'affichage curses
+# Small curses display helpers
 # --------------------------------------------------------------------------
 
 def safe_addstr(win, y: int, x: int, text: str, attr=0) -> None:
-    """Évite les crashs si le texte dépasse la fenêtre (terminal trop petit)."""
+    """Avoid crashes when text is wider than the window (terminal too small)."""
     max_y, max_x = win.getmaxyx()
     if y < 0 or y >= max_y or x >= max_x:
         return
@@ -72,9 +74,9 @@ def safe_addstr(win, y: int, x: int, text: str, attr=0) -> None:
 
 
 def prompt_text(stdscr, prompt: str, initial: str = "") -> str | None:
-    """Affiche une invite de saisie en bas d'écran. Retourne None si annulé (Échap)."""
+    """Show an input prompt at the bottom of the screen. Return None if cancelled (Escape)."""
     curses.curs_set(1)
-    max_y, max_x = stdscr.getmaxyx()
+    max_y, _max_x = stdscr.getmaxyx()
     y = max_y - 2
     text = initial
     while True:
@@ -86,7 +88,7 @@ def prompt_text(stdscr, prompt: str, initial: str = "") -> str | None:
         if ch in (curses.KEY_ENTER, 10, 13):
             curses.curs_set(0)
             return text
-        elif ch == 27:  # Échap
+        elif ch == 27:  # Escape
             curses.curs_set(0)
             return None
         elif ch in (curses.KEY_BACKSPACE, 127, 8):
@@ -96,7 +98,7 @@ def prompt_text(stdscr, prompt: str, initial: str = "") -> str | None:
 
 
 def show_message(stdscr, lines: list[str], title: str = "") -> None:
-    """Affiche un message simple, attend une touche."""
+    """Show a simple message and wait for a key press."""
     stdscr.clear()
     y = 1
     if title:
@@ -105,22 +107,22 @@ def show_message(stdscr, lines: list[str], title: str = "") -> None:
     for line in lines:
         safe_addstr(stdscr, y, 2, line)
         y += 1
-    safe_addstr(stdscr, y + 1, 2, "-- Appuyez sur une touche pour continuer --", curses.A_DIM)
+    safe_addstr(stdscr, y + 1, 2, "-- Press any key to continue --", curses.A_DIM)
     stdscr.refresh()
     stdscr.getch()
 
 
 # --------------------------------------------------------------------------
-# Écrans
+# Screens
 # --------------------------------------------------------------------------
 
 def screen_main_menu(stdscr, state: AppState) -> str:
-    """Menu principal. Retourne l'action choisie : 'scan', 'undo', 'help', 'quit'."""
+    """Main menu. Return the chosen action: 'scan', 'undo', 'help', 'quit'."""
     items = [
-        ("Scanner un dossier", "scan"),
-        ("Annuler la dernière exécution appliquée", "undo"),
-        ("Aide", "help"),
-        ("Quitter", "quit"),
+        ("Scan a folder", "scan"),
+        ("Undo last applied run", "undo"),
+        ("Help", "help"),
+        ("Quit", "quit"),
     ]
     selected = 0
     curses.curs_set(0)
@@ -140,7 +142,7 @@ def screen_main_menu(stdscr, state: AppState) -> str:
             safe_addstr(stdscr, y, 2, "=== ORGALAZY ===", curses.A_BOLD)
             y += 2
 
-        subtitle = "Rangeur de fichiers par catégorie — sûr, sans dépendances, sans surprise"
+        subtitle = "File organizer by category — safe, dependency-free, no surprises"
         safe_addstr(stdscr, y, max(0, (max_x - len(subtitle)) // 2), subtitle, curses.A_DIM)
         y += 2
 
@@ -148,7 +150,7 @@ def screen_main_menu(stdscr, state: AppState) -> str:
             attr = curses.A_REVERSE if i == selected else 0
             safe_addstr(stdscr, y + i, 4, f"  {label}", attr)
 
-        safe_addstr(stdscr, y + len(items) + 2, 2, "↑↓ naviguer · Entrée valider · q quitter", curses.A_DIM)
+        safe_addstr(stdscr, y + len(items) + 2, 2, "↑↓ navigate · Enter select · q quit", curses.A_DIM)
         stdscr.refresh()
 
         ch = stdscr.getch()
@@ -164,41 +166,43 @@ def screen_main_menu(stdscr, state: AppState) -> str:
 
 def screen_help(stdscr) -> None:
     lines = [
-        "SCANNER UN DOSSIER",
-        "  1. Choisis le dossier cible, les options (récursif, doublons, exclusions).",
-        "  2. Le scan est une SIMULATION : rien n'est modifié tant que tu n'appliques pas.",
-        "  3. Dans l'aperçu, ouvre une catégorie pour voir le détail des fichiers concernés.",
-        "  4. Appuie sur 'a' pour appliquer réellement (confirmation demandée).",
+        "SCAN A FOLDER",
+        "  1. Choose the target folder and options (recursive, duplicates, exclusions).",
+        "  2. The scan is a SIMULATION: nothing changes until you apply it.",
+        "  3. In the preview, expand a category to see the files involved.",
+        "  4. Press 'a' to apply for real (confirmation required).",
         "",
-        "ANNULER",
-        "  Restaure les fichiers d'une exécution appliquée à leur emplacement d'origine.",
-        "  Nécessite le même dossier que celui utilisé lors du scan appliqué.",
+        "UNDO",
+        "  Restore files from an applied run to their original location.",
+        "  Requires the same folder that was used for the applied scan.",
         "",
-        "RACCOURCIS GLOBAUX",
-        "  Flèches / j k     : se déplacer",
-        "  Entrée            : valider / ouvrir",
-        "  Espace            : cocher une case",
-        "  a                 : appliquer (écran d'aperçu)",
-        "  q / Échap         : retour / annuler la saisie",
+        "GLOBAL SHORTCUTS",
+        "  Arrows / j k      : move",
+        "  Enter             : confirm / expand",
+        "  Space             : toggle an option",
+        "  a                 : apply (preview screen)",
+        "  q / Escape        : back / cancel input",
     ]
-    show_message(stdscr, lines, "Aide")
+    show_message(stdscr, lines, "Help")
 
 
 def screen_setup(stdscr, state: AppState) -> bool:
-    """Écran de configuration du scan. Retourne False si annulé."""
+    """Scan setup screen. Return False if cancelled."""
     options = [
-        ("Dossier cible", "dir"),
-        ("Récursif (sous-dossiers)", "recursive"),
-        ("Détecter les doublons", "dedupe"),
-        ("Exclure (noms séparés par espace)", "exclude"),
-        ("Config personnalisée (JSON, optionnel)", "config"),
-        (">>> Lancer le scan", "scan"),
+        ("Target folder", "dir"),
+        ("Recursive (subfolders)", "recursive"),
+        ("Detect duplicates", "dedupe"),
+        ("Group by date (YYYY-MM)", "by_date"),
+        ("Include hidden files", "include_hidden"),
+        ("Exclude (space-separated names)", "exclude"),
+        ("Custom config (JSON, optional)", "config"),
+        (">>> Start scan", "scan"),
     ]
     selected = 0
 
     while True:
         stdscr.clear()
-        safe_addstr(stdscr, 1, 2, "=== Configuration du scan ===", curses.A_BOLD)
+        safe_addstr(stdscr, 1, 2, "=== Scan setup ===", curses.A_BOLD)
 
         for i, (label, key) in enumerate(options):
             attr = curses.A_REVERSE if i == selected else 0
@@ -208,16 +212,20 @@ def screen_setup(stdscr, state: AppState) -> bool:
                 value = "[x]" if state.recursive else "[ ]"
             elif key == "dedupe":
                 value = "[x]" if state.dedupe else "[ ]"
+            elif key == "by_date":
+                value = "[x]" if state.by_date else "[ ]"
+            elif key == "include_hidden":
+                value = "[x]" if state.include_hidden else "[ ]"
             elif key == "exclude":
-                value = state.exclude_str or "(aucun)"
+                value = state.exclude_str or "(none)"
             elif key == "config":
-                value = state.config_path_str or "(catégories par défaut)"
+                value = state.config_path_str or "(default categories)"
             else:
                 value = ""
             safe_addstr(stdscr, 4 + i, 4, f"{label:<38} {value}", attr)
 
         safe_addstr(stdscr, 4 + len(options) + 2, 2,
-                    "↑↓ naviguer · Entrée modifier/valider · Espace cocher · q retour", curses.A_DIM)
+                    "↑↓ navigate · Enter edit/confirm · Space toggle · q back", curses.A_DIM)
         stdscr.refresh()
 
         ch = stdscr.getch()
@@ -232,23 +240,31 @@ def screen_setup(stdscr, state: AppState) -> bool:
                 state.recursive = not state.recursive
             elif key == "dedupe":
                 state.dedupe = not state.dedupe
+            elif key == "by_date":
+                state.by_date = not state.by_date
+            elif key == "include_hidden":
+                state.include_hidden = not state.include_hidden
         elif ch in (curses.KEY_ENTER, 10, 13):
             if key == "dir":
-                result = prompt_text(stdscr, "Dossier cible : ", state.target_dir_str)
+                result = prompt_text(stdscr, "Target folder: ", state.target_dir_str)
                 if result is not None:
                     state.target_dir_str = result
             elif key == "exclude":
-                result = prompt_text(stdscr, "Exclure (ex: ProjetX Archive) : ", state.exclude_str)
+                result = prompt_text(stdscr, "Exclude (e.g. ProjectX Archive): ", state.exclude_str)
                 if result is not None:
                     state.exclude_str = result
             elif key == "config":
-                result = prompt_text(stdscr, "Chemin du fichier JSON de config : ", state.config_path_str)
+                result = prompt_text(stdscr, "Config JSON file path: ", state.config_path_str)
                 if result is not None:
                     state.config_path_str = result
             elif key == "recursive":
                 state.recursive = not state.recursive
             elif key == "dedupe":
                 state.dedupe = not state.dedupe
+            elif key == "by_date":
+                state.by_date = not state.by_date
+            elif key == "include_hidden":
+                state.include_hidden = not state.include_hidden
             elif key == "scan":
                 return True
         elif ch in (ord("q"), 27):
@@ -256,10 +272,10 @@ def screen_setup(stdscr, state: AppState) -> bool:
 
 
 def run_scan(stdscr, state: AppState) -> str | None:
-    """Exécute plan_actions(). Retourne un message d'erreur, ou None si succès."""
+    """Run plan_actions(). Return an error message, or None on success."""
     target_dir = Path(state.target_dir_str).expanduser().resolve()
     if not target_dir.exists() or not target_dir.is_dir():
-        return f"Le dossier '{target_dir}' n'existe pas ou n'est pas un dossier."
+        return f"The folder '{target_dir}' does not exist or is not a folder."
 
     exclude = set(state.exclude_str.split()) if state.exclude_str.strip() else set()
 
@@ -267,14 +283,12 @@ def run_scan(stdscr, state: AppState) -> str | None:
     if state.config_path_str.strip():
         config_path = Path(state.config_path_str).expanduser().resolve()
         if not config_path.exists():
-            return f"Fichier de config introuvable : '{config_path}'."
+            return f"Config file not found: '{config_path}'."
         try:
             data = orgalazy.json.loads(config_path.read_text(encoding="utf-8"))
-        except (OSError, orgalazy.json.JSONDecodeError) as e:
-            return f"Erreur de lecture de la config : {e}"
-        if not isinstance(data, dict):
-            return "Le fichier de config doit contenir un objet JSON {catégorie: [extensions]}."
-        categories = data
+            categories = orgalazy.validate_categories(data)
+        except (OSError, orgalazy.json.JSONDecodeError, ValueError) as e:
+            return f"Could not read config: {e}"
 
     try:
         state.actions = orgalazy.plan_actions(
@@ -283,39 +297,41 @@ def run_scan(stdscr, state: AppState) -> str | None:
             dedupe=state.dedupe,
             recursive=state.recursive,
             exclude=exclude,
+            layout="date" if state.by_date else "type",
+            include_hidden=state.include_hidden,
         )
     except OSError as e:
-        return f"Erreur pendant le scan : {e}"
+        return f"Error during scan: {e}"
 
     return None
 
 
 def screen_preview(stdscr, state: AppState) -> None:
     """
-    Écran d'aperçu : navigue dans les catégories, affiche les fichiers concernés,
-    permet d'appliquer réellement les actions avec 'a'.
+    Preview screen: browse categories, show the files involved, and apply the
+    actions for real with 'a'.
     """
     target_dir = Path(state.target_dir_str).expanduser().resolve()
 
     if not state.actions:
-        show_message(stdscr, ["Aucun fichier à traiter (déjà rangé, ou dossier vide)."], "Aperçu")
+        show_message(stdscr, ["No files to process (already organized, or empty folder)."], "Preview")
         return
 
-    # Regrouper par catégorie
+    # Group by category
     by_category: dict[str, list[orgalazy.Action]] = {}
     for action in state.actions:
         by_category.setdefault(action.category, []).append(action)
 
     categories = sorted(by_category.keys())
     cat_selected = 0
-    expanded: str | None = None   # catégorie actuellement dépliée
+    expanded: str | None = None   # category currently expanded
     file_selected = 0
 
     while True:
         stdscr.clear()
-        safe_addstr(stdscr, 1, 2, f"=== Aperçu : {target_dir} ===", curses.A_BOLD)
+        safe_addstr(stdscr, 1, 2, f"=== Preview: {target_dir} ===", curses.A_BOLD)
         total = len(state.actions)
-        safe_addstr(stdscr, 2, 2, f"{total} action(s) planifiée(s) — SIMULATION, rien n'est encore modifié", curses.A_DIM)
+        safe_addstr(stdscr, 2, 2, f"{total} planned action(s) — SIMULATION, nothing changed yet", curses.A_DIM)
 
         y = 4
         for i, cat in enumerate(categories):
@@ -323,14 +339,14 @@ def screen_preview(stdscr, state: AppState) -> None:
             is_cat_selected = (i == cat_selected and expanded is None)
             attr = curses.A_REVERSE if is_cat_selected else curses.A_BOLD
             prefix = "▼" if expanded == cat else "▶"
-            safe_addstr(stdscr, y, 4, f"{prefix} {cat} ({count} fichier(s))", attr)
+            safe_addstr(stdscr, y, 4, f"{prefix} {cat} ({count} file(s))", attr)
             y += 1
 
             if expanded == cat:
                 for j, action in enumerate(by_category[cat]):
                     is_file_selected = (j == file_selected)
                     attr = curses.A_REVERSE if is_file_selected else 0
-                    tag = "[doublon] " if action.kind == "duplicate" else ""
+                    tag = "[duplicate] " if action.kind == "duplicate" else ""
                     line = f"    {tag}{action.src.name}"
                     safe_addstr(stdscr, y, 4, line, attr)
                     y += 1
@@ -339,7 +355,7 @@ def screen_preview(stdscr, state: AppState) -> None:
 
         help_y = curses.LINES - 3
         safe_addstr(stdscr, help_y, 2,
-                    "↑↓ naviguer · Entrée déplier/replier · a appliquer · q retour", curses.A_DIM)
+                    "↑↓ navigate · Enter expand/collapse · a apply · q back", curses.A_DIM)
         stdscr.refresh()
 
         ch = stdscr.getch()
@@ -355,9 +371,25 @@ def screen_preview(stdscr, state: AppState) -> None:
             elif ch == ord("a"):
                 if confirm_apply(stdscr, total):
                     undo_log_path = target_dir / orgalazy.UNDO_LOG_FILENAME
-                    orgalazy.apply_actions(state.actions, undo_log_path=undo_log_path)
-                    show_message(stdscr, [f"{total} action(s) appliquée(s) avec succès.",
-                                           f"Journal d'annulation : {undo_log_path}"], "Terminé")
+                    errors = orgalazy.apply_actions(state.actions, undo_log_path=undo_log_path)
+                    if errors:
+                        lines = [
+                            f"{len(errors)} action(s) failed; "
+                            f"{total - len(errors)} succeeded.",
+                            "",
+                            "Errors:",
+                        ]
+                        lines.extend(errors[:10])
+                        show_message(stdscr, lines, "Partial failure")
+                    else:
+                        show_message(
+                            stdscr,
+                            [
+                                f"{total} action(s) applied successfully.",
+                                f"Undo log: {undo_log_path}",
+                            ],
+                            "Done",
+                        )
                     state.actions = []
                     return
             elif ch in (ord("q"), 27):
@@ -374,7 +406,7 @@ def screen_preview(stdscr, state: AppState) -> None:
 
 def confirm_apply(stdscr, count: int) -> bool:
     stdscr.clear()
-    safe_addstr(stdscr, 2, 2, f"Confirmer l'application de {count} action(s) ? (o/n)", curses.A_BOLD)
+    safe_addstr(stdscr, 2, 2, f"Apply {count} action(s)? (y/n)", curses.A_BOLD)
     stdscr.refresh()
     while True:
         ch = stdscr.getch()
@@ -385,33 +417,39 @@ def confirm_apply(stdscr, count: int) -> bool:
 
 
 def screen_undo(stdscr, state: AppState) -> None:
-    result = prompt_text(stdscr, "Dossier concerné : ", state.target_dir_str)
+    result = prompt_text(stdscr, "Folder: ", state.target_dir_str)
     if result is None:
         return
     target_dir = Path(result).expanduser().resolve()
     undo_log_path = target_dir / orgalazy.UNDO_LOG_FILENAME
 
     if not undo_log_path.exists():
-        show_message(stdscr, [f"Aucun journal d'annulation trouvé dans {target_dir}.",
-                               "(Il faut avoir appliqué une exécution au préalable.)"], "Annulation")
+        show_message(
+            stdscr,
+            [
+                f"No undo log found in {target_dir}.",
+                "(You need to have applied a run first.)",
+            ],
+            "Undo",
+        )
         return
 
     try:
         restored, errors = orgalazy.undo_last_run(undo_log_path)
     except (OSError, ValueError) as e:
-        show_message(stdscr, [f"Erreur lors de l'annulation : {e}"], "Annulation")
+        show_message(stdscr, [f"Error while undoing: {e}"], "Undo")
         return
 
-    lines = [f"{restored} fichier(s) restauré(s) à leur emplacement d'origine."]
+    lines = [f"{restored} file(s) restored to their original location."]
     if errors:
         lines.append("")
-        lines.append("Erreurs rencontrées :")
+        lines.append("Errors encountered:")
         lines.extend(errors[:10])
-    show_message(stdscr, lines, "Annulation terminée")
+    show_message(stdscr, lines, "Undo complete")
 
 
 # --------------------------------------------------------------------------
-# Boucle principale
+# Main loop
 # --------------------------------------------------------------------------
 
 def main(stdscr) -> None:
@@ -432,7 +470,7 @@ def main(stdscr) -> None:
                 continue
             error = run_scan(stdscr, state)
             if error:
-                show_message(stdscr, [error], "Erreur")
+                show_message(stdscr, [error], "Error")
                 continue
             screen_preview(stdscr, state)
 

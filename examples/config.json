@@ -4,5 +4,5 @@
   "Archives": ["zip", "tar", "gz", "7z"],
   "Code": ["py", "js", "ts", "html", "css", "json"],
   "3D": ["blend", "obj", "fbx", "stl"],
-  "Projets": ["psd", "ai", "fig"]
+  "Projects": ["psd", "ai", "fig"]
 }

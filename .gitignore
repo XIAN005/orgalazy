@@ -8,12 +8,12 @@ dist/
 .venv/
 venv/
 
-# Journaux créés par Orgalazy dans le dossier cible
+# Logs created by Orgalazy inside the target folder
 .orgalazy_log.txt
 .orgalazy_undo.json
 .orgalazy_undo.json.tmp
 
-# Éditeurs et systèmes
+# Editors and operating systems
 .vscode/
 .idea/
 .DS_Store

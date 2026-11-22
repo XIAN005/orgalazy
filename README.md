@@ -1,69 +1,89 @@
 # Orgalazy
 
-> Range automatiquement un dossier par type de fichier (ou par date), sans dépendance et sans jamais supprimer vos fichiers.
+> Automatically organize a folder by file type (or date), with zero dependencies and no deletions.
 
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue)
 ![Tests](https://github.com/XIAN005/orgalazy/actions/workflows/tests.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-**Orgalazy** est un petit utilitaire en ligne de commande — avec une interface texte (TUI) — écrit uniquement avec la bibliothèque standard de Python. Il déplace les fichiers encombrants d'un dossier (`~/Downloads`, un bureau, etc.) dans des sous-dossiers clairs : `Images`, `Documents`, `Videos`, `Archives`…
+**English** | [Français](README.fr.md)
 
-Le mode **simulation** est actif par défaut : rien n'est déplacé tant que vous n'ajoutez pas `--apply`.
+**Orgalazy** is a small command-line utility — with a text interface (TUI) — written using only the Python standard library. It moves cluttered files from a folder (`~/Downloads`, a desktop, etc.) into clear subfolders: `Images`, `Documents`, `Videos`, `Archives`…
+
+The **dry-run mode is enabled by default**: nothing is moved until you add `--apply`.
 
 ---
 
-## Sommaire
+## Table of contents
 
-- [Fonctionnalités](#fonctionnalités)
-- [Sécurité](#sécurité)
-- [Prérequis](#prérequis)
+- [Features](#features)
+- [Safety](#safety)
+- [Requirements](#requirements)
 - [Installation](#installation)
-- [Utilisation rapide](#utilisation-rapide)
-- [Options de la ligne de commande](#options-de-la-ligne-de-commande)
-- [Ranger par date](#ranger-par-date)
-- [Doublons](#doublons)
-- [Annuler une exécution](#annuler-une-exécution)
-- [Configuration personnalisée](#configuration-personnalisée)
-- [Interface TUI](#interface-tui)
+- [Quick start](#quick-start)
+- [Command-line options](#command-line-options)
+- [Organize by date](#organize-by-date)
+- [Duplicates](#duplicates)
+- [Undo a run](#undo-a-run)
+- [Custom configuration](#custom-configuration)
+- [Text interface (TUI)](#text-interface-tui)
 - [Tests](#tests)
-- [Structure du projet](#structure-du-projet)
-- [Licence](#licence)
+- [Project structure](#project-structure)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## Fonctionnalités
+## Features
 
-- **Classement par type** : images, vidéos, audio, documents, tableurs, archives, code, polices, ebooks…
-- **Classement par date** avec `--by-date` : dossiers `2026-11`, `2026-10`, etc.
-- **Détection de doublons** par empreinte SHA-256, sans suppression : les copies sont déplacées dans `_Doublons`.
-- **Mode simulation par défaut** : aperçu complet avant toute modification.
-- **Annulation** des déplacements grâce à un journal `.orgalazy_undo.json`.
-- **Aucun écrasement** : en cas de conflit de nom, un suffixe est ajouté (`photo (1).jpg`).
-- **Fichiers cachés ignorés par défaut** : indispensable si vous lancez l'outil sur votre dossier personnel.
-- **Aucune dépendance externe** : un seul fichier Python à copier ou cloner.
-- **Interface TUI** en curses pour naviguer, prévisualiser et appliquer.
+- **Sort by type**: images, videos, audio, documents, spreadsheets, archives, code, fonts, ebooks…
+- **Sort by date** with `--by-date`: folders such as `2026-11`, `2026-10`, etc.
+- **Duplicate detection** using SHA-256, without deletion: copies are moved to `_Duplicates`.
+- **Dry-run by default**: review the full plan before changing anything.
+- **Undo** moves through the `.orgalazy_undo.json` journal.
+- **Never overwrites**: on a name conflict, a suffix is added (`photo (1).jpg`).
+- **Hidden files are skipped by default**: essential when running the tool on your home folder.
+- **No external dependencies**: a single Python file to copy or clone.
+- **Curses TUI** to browse, preview, and apply actions.
 
-## Sécurité
+### Default categories
 
-Orgalazy est conçu pour être prudent :
-
-| Garantie | Détail |
+| Folder | Examples of extensions |
 |---|---|
-| Rien n'est supprimé | Les doublons sont **déplacés**, jamais effacés. |
-| Rien n'est écrasé | Une destination existante devient `nom (1).ext`, `nom (2).ext`, etc. |
-| Simulation par défaut | Sans `--apply`, le programme affiche seulement le plan d'action. |
-| Fichiers cachés protégés | `.bashrc`, `.config`, `.cache`… sont ignorés sauf avec `--include-hidden`. |
-| Erreurs non bloquantes | Un fichier illisible n'empêche pas les autres déplacements. |
-| Journal d'annulation | Les déplacements réussis restent annulables, même en cas d'échec partiel. |
-| Configuration validée | Les noms de catégorie contenant des chemins (`../`) sont refusés. |
+| `Images` | jpg, jpeg, png, gif, bmp, svg, webp, heic, tiff, raw… |
+| `Videos` | mp4, mkv, avi, mov, webm, m4v… |
+| `Audio` | mp3, wav, flac, aac, ogg, m4a, opus… |
+| `Documents` | pdf, doc, docx, odt, txt, rtf, md… |
+| `Spreadsheets` | xls, xlsx, ods, csv, tsv |
+| `Presentations` | ppt, pptx, odp, key |
+| `Archives` | zip, rar, 7z, tar, gz, xz, iso… |
+| `Code` | py, js, ts, html, css, c, cpp, java, rs, go, json… |
+| `Executables` | exe, msi, deb, rpm, appimage, bin… |
+| `Fonts` | ttf, otf, woff, woff2 |
+| `Ebooks` | epub, mobi, azw, azw3, fb2 |
+| `Others` | anything else |
 
-> Conseil : lancez toujours une première fois **sans** `--apply`, puis relisez l'aperçu.
+## Safety
 
-## Prérequis
+Orgalazy is designed to be careful:
 
-- Python **3.8 ou plus récent**
-- Linux ou macOS pour la TUI (`curses`). La ligne de commande fonctionne aussi sous Windows.
-- Aucun paquet à installer.
+| Guarantee | Detail |
+|---|---|
+| Nothing is deleted | Duplicates are **moved**, never erased. |
+| Nothing is overwritten | An existing destination becomes `name (1).ext`, `name (2).ext`, etc. |
+| Dry-run by default | Without `--apply`, the program only prints the action plan. |
+| Hidden files protected | `.bashrc`, `.config`, `.cache`… are skipped unless `--include-hidden` is used. |
+| Errors do not stop the run | One unreadable file does not prevent other moves. |
+| Undo journal | Successful moves remain undoable, even after a partial failure. |
+| Validated configuration | Category names containing paths (`../`) are rejected. |
+
+> Tip: always run it **without** `--apply` first and review the preview.
+
+## Requirements
+
+- Python **3.8 or newer**
+- Linux or macOS for the TUI (`curses`). The command line also works on Windows.
+- No package to install.
 
 ## Installation
 
@@ -75,13 +95,13 @@ chmod +x orgalazy.py orgalazy_tui.py
 python3 orgalazy.py --version
 ```
 
-Vous pouvez aussi simplement télécharger `orgalazy.py` et le lancer directement :
+You can also download `orgalazy.py` on its own and run it directly:
 
 ```bash
 python3 orgalazy.py ~/Downloads
 ```
 
-Pour l'utiliser comme commande globale :
+To use it as a global command:
 
 ```bash
 mkdir -p ~/.local/bin
@@ -89,58 +109,58 @@ ln -s "$PWD/orgalazy.py" ~/.local/bin/orgalazy
 orgalazy ~/Downloads
 ```
 
-## Utilisation rapide
+## Quick start
 
 ```bash
-# 1. Simulation : affiche ce qui serait déplacé, ne touche à rien
+# 1. Preview: show what would be moved, change nothing
 python3 orgalazy.py ~/Downloads
 
-# 2. Application réelle
+# 2. Apply for real
 python3 orgalazy.py ~/Downloads --apply
 
-# 3. Avec détection des doublons
+# 3. With duplicate detection
 python3 orgalazy.py ~/Downloads --apply --dedupe
 
-# 4. Ranger par mois de modification
+# 4. Group files by modification month
 python3 orgalazy.py ~/Downloads --apply --by-date
 
-# 5. Parcourir les sous-dossiers en excluant certains dossiers
-python3 orgalazy.py ~/Documents --apply --recursive --exclude Projets Archives
+# 5. Scan subfolders while excluding some folders
+python3 orgalazy.py ~/Documents --apply --recursive --exclude Projects Archives
 
-# 6. Inclure les fichiers cachés (à utiliser en connaissance de cause)
+# 6. Include hidden files (use with care)
 python3 orgalazy.py ~/Downloads --apply --include-hidden
 ```
 
-Un journal lisible est écrit dans le dossier cible : `.orgalazy_log.txt`.
+A human-readable log is written to the target folder: `.orgalazy_log.txt`.
 
-## Options de la ligne de commande
+## Command-line options
 
 ```text
-python3 orgalazy.py DOSSIER [options]
+python3 orgalazy.py DIRECTORY [options]
 ```
 
-| Option | Effet |
+| Option | Effect |
 |---|---|
-| `--apply` | Applique réellement les déplacements. Sans cette option : simulation. |
-| `--undo` | Annule les déplacements enregistrés dans le journal du dossier. |
-| `--dedupe` | Détecte les doublons de contenu et les déplace dans `_Doublons`. |
-| `--recursive` | Parcourt aussi les sous-dossiers. |
-| `--by-date` | Range par mois (`AAAA-MM`) au lieu de ranger par type. |
-| `--include-hidden` | Traite aussi les fichiers et dossiers cachés. |
-| `--exclude NOM [NOM ...]` | Ignore complètement les sous-dossiers indiqués. |
-| `--config FICHIER.json` | Utilise une configuration de catégories personnalisée. |
-| `--version` | Affiche la version. |
+| `--apply` | Apply the moves for real. Without it: dry-run. |
+| `--undo` | Undo the moves recorded in the folder's journal. |
+| `--dedupe` | Detect duplicate content and move copies to `_Duplicates`. |
+| `--recursive` | Also scan subfolders. |
+| `--by-date` | Group by month (`YYYY-MM`) instead of by file type. |
+| `--include-hidden` | Also process hidden files and folders. |
+| `--exclude NAME [NAME ...]` | Completely ignore the listed subfolders. |
+| `--config FILE.json` | Use a custom category configuration. |
+| `--version` | Print the version. |
 
-`--apply` et `--undo` sont incompatibles.
+`--apply` and `--undo` are mutually exclusive.
 
-## Ranger par date
+## Organize by date
 
 ```bash
-python3 orgalazy.py ~/Pictures --by-date          # aperçu
-python3 orgalazy.py ~/Pictures --by-date --apply  # application
+python3 orgalazy.py ~/Pictures --by-date          # preview
+python3 orgalazy.py ~/Pictures --by-date --apply  # apply
 ```
 
-Les fichiers sont regroupés selon leur date de dernière modification :
+Files are grouped by their last modification date:
 
 ```text
 Pictures/
@@ -149,32 +169,32 @@ Pictures/
 └── 2026-09/
 ```
 
-Relancer le script sur un dossier déjà rangé par date ne déplace pas les fichiers à nouveau.
+Running the script again on a folder already organized by date does not move files again.
 
-## Doublons
+## Duplicates
 
 ```bash
 python3 orgalazy.py ~/Downloads --dedupe
 ```
 
-- Deux fichiers sont considérés identiques s'ils ont le **même contenu** (SHA-256), pas seulement le même nom.
-- Le plus ancien (date de modification) est conservé à sa place.
-- Les copies sont déplacées dans `_Doublons/`, jamais supprimées.
-- Le dossier `_Doublons` est ignoré lors des exécutions suivantes.
+- Two files are considered identical when they have the **same content** (SHA-256), not merely the same name.
+- The oldest file (by modification time) stays where it is.
+- Copies are moved to `_Duplicates/`, never deleted.
+- The `_Duplicates` folder is ignored on subsequent runs.
 
-## Annuler une exécution
+## Undo a run
 
 ```bash
 python3 orgalazy.py ~/Downloads --undo
 ```
 
-Le journal `.orgalazy_undo.json` contient les couples source/destination. L'annulation restaure les fichiers dans leur dossier d'origine et supprime les dossiers de catégorie devenus vides.
+The `.orgalazy_undo.json` journal stores source/destination pairs. Undo restores files to their original folder and removes category folders that became empty.
 
-Le journal est **cumulatif** : si vous appliquez plusieurs exécutions sans annuler, `--undo` restaure l'ensemble des déplacements encore en place.
+The journal is **cumulative**: if you apply several runs without undoing, `--undo` restores every move that is still in place.
 
-## Configuration personnalisée
+## Custom configuration
 
-Le fichier [`examples/config.json`](examples/config.json) montre comment définir ses propres catégories :
+The file [`examples/config.json`](examples/config.json) shows how to define your own categories:
 
 ```json
 {
@@ -183,7 +203,7 @@ Le fichier [`examples/config.json`](examples/config.json) montre comment défini
   "Archives": ["zip", "tar", "gz", "7z"],
   "Code": ["py", "js", "ts", "html", "css", "json"],
   "3D": ["blend", "obj", "fbx", "stl"],
-  "Projets": ["psd", "ai", "fig"]
+  "Projects": ["psd", "ai", "fig"]
 }
 ```
 
@@ -191,68 +211,73 @@ Le fichier [`examples/config.json`](examples/config.json) montre comment défini
 python3 orgalazy.py ~/Downloads --config examples/config.json
 ```
 
-Les clés sont les noms de dossiers, les valeurs sont les extensions (avec ou sans point). Si le fichier est invalide, Orgalazy revient aux catégories par défaut et l'indique dans le journal.
+Keys are folder names; values are extensions (with or without a leading dot). If the file is invalid, Orgalazy falls back to the default categories and says so in the log.
 
-## Interface TUI
+## Text interface (TUI)
 
 ```bash
 python3 orgalazy_tui.py
 ```
 
-L'interface permet de :
+The interface lets you:
 
-1. choisir le dossier cible ;
-2. activer le mode récursif et la détection de doublons ;
-3. exclure des dossiers et charger une configuration JSON ;
-4. prévisualiser les actions par catégorie ;
-5. appliquer avec la touche `a` après confirmation ;
-6. annuler la dernière exécution depuis le menu principal.
+1. choose the target folder;
+2. enable recursive scanning, duplicate detection, date grouping, and hidden files;
+3. exclude folders and load a JSON configuration;
+4. preview actions grouped by category;
+5. apply with `a` after confirmation;
+6. undo the last run from the main menu.
 
-| Touche | Action |
+| Key | Action |
 |---|---|
-| `↑` `↓` ou `j` `k` | Se déplacer |
-| `Entrée` | Valider / ouvrir une catégorie |
-| `Espace` | Cocher / décocher une option |
-| `a` | Appliquer le plan affiché |
-| `q` / `Échap` | Retour / quitter |
+| `↑` `↓` or `j` `k` | Move |
+| `Enter` | Confirm / expand a category |
+| `Space` | Toggle an option |
+| `a` | Apply the displayed plan |
+| `q` / `Escape` | Back / quit |
 
-La TUI utilise le classement par type. Pour `--by-date` et `--include-hidden`, utilisez la ligne de commande.
+The TUI requires `curses` (Linux, macOS, and WSL). On native Windows, use the command line.
 
 ## Tests
 
-La suite de tests ne touche qu'à des dossiers temporaires :
+The test suite only touches temporary folders:
 
 ```bash
 python3 -m unittest -v test_orgalazy.py
 ```
 
-Elle couvre notamment : le classement, les collisions de noms, les doublons, l'annulation, les échecs partiels, les fichiers cachés et le mode par date.
+It covers categorization, name collisions, duplicates, undo, partial failures, hidden files, and date mode.
 
-Une intégration continue GitHub Actions exécute ces tests sur plusieurs versions de Python à chaque `push` et `pull request`.
+GitHub Actions runs these tests on several Python versions on every `push` and `pull request`.
 
-## Structure du projet
+## Project structure
 
 ```text
 .
-├── orgalazy.py                  # CLI + logique de classement
-├── orgalazy_tui.py              # interface texte (curses)
-├── test_orgalazy.py             # tests unitaires (unittest)
+├── orgalazy.py                  # CLI + organization logic
+├── orgalazy_tui.py              # text interface (curses)
+├── test_orgalazy.py             # unit tests (unittest)
 ├── examples/
-│   └── config.json              # exemple de configuration
+│   └── config.json              # example configuration
 ├── .github/
 │   └── workflows/
-│       └── tests.yml            # intégration continue
+│       └── tests.yml            # continuous integration
 ├── .gitignore
 ├── LICENSE
-└── README.md
+├── README.md
+└── README.fr.md                 # French documentation
 ```
 
-## Licence
+## Contributing
 
-Distribué sous licence [MIT](LICENSE). Vous pouvez l'utiliser, le modifier et le redistribuer librement.
+Issues and pull requests are welcome. Before submitting a change, run:
 
----
+```bash
+python3 -m unittest -v test_orgalazy.py
+```
 
-## English summary
+Please keep the project dependency-free and preserve the dry-run-by-default behavior.
 
-Orgalazy is a dependency-free Python CLI and TUI that sorts files by type or modification month. It previews changes by default, never deletes anything, detects duplicates via SHA-256, avoids overwriting files, and supports undo. Run it without `--apply` to see the plan first.
+## License
+
+Released under the [MIT License](LICENSE). You are free to use, modify, and redistribute it.

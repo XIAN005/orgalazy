@@ -13,13 +13,13 @@ jobs:
         python-version: ["3.8", "3.11", "3.13"]
 
     steps:
-      - name: Récupérer le dépôt
+      - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: Installer Python ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Lancer les tests
+      - name: Run tests
         run: python -m unittest -v test_orgalazy.py
