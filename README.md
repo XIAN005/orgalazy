@@ -3,6 +3,7 @@
 > Range automatiquement un dossier par type de fichier (ou par date), sans dépendance et sans jamais supprimer vos fichiers.
 
 ![Python](https://img.shields.io/badge/python-3.8%2B-blue)
+![Tests](https://github.com/XIAN005/orgalazy/actions/workflows/tests.yml/badge.svg)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 **Orgalazy** est un petit utilitaire en ligne de commande — avec une interface texte (TUI) — écrit uniquement avec la bibliothèque standard de Python. Il déplace les fichiers encombrants d'un dossier (`~/Downloads`, un bureau, etc.) dans des sous-dossiers clairs : `Images`, `Documents`, `Videos`, `Archives`…
@@ -67,14 +68,12 @@ Orgalazy est conçu pour être prudent :
 ## Installation
 
 ```bash
-git clone https://github.com/VOTRE_COMPTE/orgalazy.git
+git clone https://github.com/XIAN005/orgalazy.git
 cd orgalazy
 chmod +x orgalazy.py orgalazy_tui.py
 
 python3 orgalazy.py --version
 ```
-
-Remplacez `VOTRE_COMPTE` par votre nom d'utilisateur GitHub.
 
 Vous pouvez aussi simplement télécharger `orgalazy.py` et le lancer directement :
 
