@@ -7,9 +7,9 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 
 **English** | [Français](README.fr.md)
-<img width="1366" height="768" alt="2026-11-22_13-37" src="https://github.com/user-attachments/assets/4797461b-0af2-4480-95a7-5787a892eba9" />
 
 **Orgalazy** is a small command-line utility — with a text interface (TUI) — written using only the Python standard library. It moves cluttered files from a folder (`~/Downloads`, a desktop, etc.) into clear subfolders: `Images`, `Documents`, `Videos`, `Archives`…
+<img width="1366" height="768" alt="2026-11-22_13-37" src="https://github.com/user-attachments/assets/4797461b-0af2-4480-95a7-5787a892eba9" />
 
 The **dry-run mode is enabled by default**: nothing is moved until you add `--apply`.
 
