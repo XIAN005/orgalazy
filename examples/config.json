@@ -1,0 +1,8 @@
+{
+  "Images": ["jpg", "jpeg", "png", "gif", "webp", "svg"],
+  "Documents": ["pdf", "docx", "odt", "txt", "md"],
+  "Archives": ["zip", "tar", "gz", "7z"],
+  "Code": ["py", "js", "ts", "html", "css", "json"],
+  "3D": ["blend", "obj", "fbx", "stl"],
+  "Projets": ["psd", "ai", "fig"]
+}
